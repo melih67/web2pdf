@@ -1,4 +1,5 @@
-import puppeteer from 'puppeteer'
+import puppeteer from 'puppeteer-core'
+import chromium from '@sparticuz/chromium'
 
 export interface PdfGenerationOptions {
   url: string
@@ -36,17 +37,31 @@ class PdfQueue {
 
     this.isInitializing = true
     try {
-      this.browser = await puppeteer.launch({
-        headless: true,
-        timeout: 15000,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-web-security',
-          '--disable-features=VizDisplayCompositor'
-        ]
-      })
+      // Check if we're in a serverless environment (like Netlify)
+      const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+      
+      if (isServerless) {
+        this.browser = await puppeteer.launch({
+          args: chromium.args,
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
+          ignoreHTTPSErrors: true,
+        })
+      } else {
+        // Local development
+        this.browser = await puppeteer.launch({
+          headless: true,
+          timeout: 15000,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-web-security',
+            '--disable-features=VizDisplayCompositor'
+          ]
+        })
+      }
     } finally {
       this.isInitializing = false
     }
@@ -147,17 +162,30 @@ export async function extractPageTitle(url: string): Promise<string> {
   let browser
   let page
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      timeout: 30000,
-      args: [
-        '--no-sandbox', 
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--single-process',
-        '--disable-gpu'
-      ]
-    })
+    // Check if we're in a serverless environment (like Netlify)
+    const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+    
+    if (isServerless) {
+      browser = await puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+        ignoreHTTPSErrors: true,
+      })
+    } else {
+      browser = await puppeteer.launch({
+        headless: true,
+        timeout: 30000,
+        args: [
+          '--no-sandbox', 
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--single-process',
+          '--disable-gpu'
+        ]
+      })
+    }
     
     page = await browser.newPage()
     page.setDefaultTimeout(20000)
