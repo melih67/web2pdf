@@ -132,7 +132,7 @@ export async function generatePdfFromUrl(options: PdfGenerationOptions): Promise
         try {
           await page.goto(url, { 
             waitUntil: 'networkidle0',
-            timeout: Math.min(timeoutMs, 25000) // Cap at 25 seconds for Netlify
+            timeout: config.timeout // Use timeout from quality config
           })
           break
         } catch (error) {
