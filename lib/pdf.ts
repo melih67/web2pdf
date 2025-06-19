@@ -172,7 +172,7 @@ export async function extractPageTitle(url: string): Promise<string> {
   let page
   try {
     // Check if we're in a serverless environment (like Netlify)
-    const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+    const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.RAILWAY_SERVICE_NAME
     
     if (isServerless) {
       browser = await puppeteer.launch({
