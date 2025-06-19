@@ -110,9 +110,30 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('PDF generation error:', error)
+    
+    // Provide more specific error information
+    let errorMessage = 'Internal server error'
+    let statusCode = 500
+    
+    if (error instanceof Error) {
+      if (error.message.includes('timeout') || error.message.includes('TimeoutError')) {
+        errorMessage = 'PDF generation timed out. Please try again with a simpler page.'
+        statusCode = 408
+      } else if (error.message.includes('navigation') || error.message.includes('net::')) {
+        errorMessage = 'Unable to access the provided URL. Please check if the URL is valid and accessible.'
+        statusCode = 400
+      } else if (error.message.includes('chromium') || error.message.includes('browser')) {
+        errorMessage = 'Browser initialization failed. Please try again.'
+        statusCode = 503
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
+      { status: statusCode }
     )
   }
 }
