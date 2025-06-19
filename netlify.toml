@@ -1,14 +1,9 @@
 [build]
-  publish = ".next"
   command = "npm run build"
 
 [build.environment]
   NODE_VERSION = "18"
   NPM_FLAGS = "--production=false"
-
-# Function settings for serverless functions
-[functions]
-  node_bundler = "esbuild"
 
 # Headers for security
 [[headers]]
@@ -17,12 +12,6 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-
-# Redirect rules
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
 
 # Environment variables that should be set in Netlify dashboard:
 # NEXT_PUBLIC_SUPABASE_URL
