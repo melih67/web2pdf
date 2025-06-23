@@ -27,13 +27,13 @@ ALTER TABLE public.pdf_exports ENABLE ROW LEVEL SECURITY;
 -- 4. Create the security policies for the table
 -- These policies define who can access and modify the data.
 CREATE POLICY "Users can view their own exports" ON public.pdf_exports
-  FOR SELECT USING ((SELECT auth.uid()) = user_id);
+  FOR SELECT USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert their own exports" ON public.pdf_exports
-  FOR INSERT WITH CHECK ((SELECT auth.uid()) = user_id);
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete their own exports" ON public.pdf_exports
-  FOR DELETE USING ((SELECT auth.uid()) = user_id);
+  FOR DELETE USING (auth.uid() = user_id);
 
 -- ==============================================================================
 -- MANUAL SETUP FOR STORAGE

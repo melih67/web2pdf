@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { useTheme } from '@/contexts/ThemeContext'
+import { usageTracker, UsageData } from '@/lib/usage-tracker'
+import AppLayout from './AppLayout'
+import Link from 'next/link'
 
 interface PdfGeneratorProps {
   user: any
@@ -26,30 +30,39 @@ export default function PdfGenerator({ user }: PdfGeneratorProps) {
   const [message, setMessage] = useState('')
   const [generatedPdf, setGeneratedPdf] = useState<GeneratedPdf | null>(null)
   const [recentUrls, setRecentUrls] = useState<string[]>([])
-  const [darkMode, setDarkMode] = useState(false)
+  const [usageData, setUsageData] = useState<UsageData | null>(null)
+  const [usageLimit, setUsageLimit] = useState<number>(3)
+  const [canGenerate, setCanGenerate] = useState<boolean>(true)
   
   const router = useRouter()
   const supabase = createClient()
+  const { darkMode } = useTheme()
 
-  // Load recent URLs and dark mode from localStorage
+  // Load recent URLs from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('recentUrls')
     if (saved) {
       setRecentUrls(JSON.parse(saved))
     }
-    
-    const savedDarkMode = localStorage.getItem('darkMode')
-    if (savedDarkMode) {
-      setDarkMode(JSON.parse(savedDarkMode))
-    }
   }, [])
 
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    const newDarkMode = !darkMode
-    setDarkMode(newDarkMode)
-    localStorage.setItem('darkMode', JSON.stringify(newDarkMode))
-  }
+  // Check usage limits when component loads or user changes
+  useEffect(() => {
+    const checkUsage = async () => {
+      if (user?.id) {
+        try {
+          const { canUse, usage, limit } = await usageTracker.checkUsageLimit(user.id)
+          setUsageData(usage)
+          setUsageLimit(limit)
+          setCanGenerate(canUse)
+        } catch (error) {
+          console.error('Error checking usage:', error)
+        }
+      }
+    }
+
+    checkUsage()
+  }, [user?.id])
 
   // Save URL to recent list
   const saveToRecent = (newUrl: string) => {
@@ -58,10 +71,7 @@ export default function PdfGenerator({ user }: PdfGeneratorProps) {
     localStorage.setItem('recentUrls', JSON.stringify(updated))
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.refresh()
-  }
+
 
   const validateUrl = (urlString: string): boolean => {
     try {
@@ -77,6 +87,18 @@ export default function PdfGenerator({ user }: PdfGeneratorProps) {
     
     if (!validateUrl(url)) {
       setMessage('Please enter a valid URL (http:// or https://)')
+      return
+    }
+
+    // Check if user is signed in
+    if (!user?.id) {
+      setMessage('Please sign in to generate PDFs')
+      return
+    }
+
+    // Check usage limits
+    if (!canGenerate) {
+      setMessage(`You've reached your monthly limit of ${usageLimit} PDF conversions. Please upgrade your plan to continue.`)
       return
     }
     
@@ -118,6 +140,20 @@ export default function PdfGenerator({ user }: PdfGeneratorProps) {
         size: data.size
       })
       
+      // Increment usage count
+      if (user?.id) {
+        try {
+          const updatedUsage = await usageTracker.incrementUsage(user.id)
+          setUsageData(updatedUsage)
+          
+          // Check if user has reached limit after this conversion
+          const { canUse } = await usageTracker.checkUsageLimit(user.id)
+          setCanGenerate(canUse)
+        } catch (error) {
+          console.error('Error updating usage:', error)
+        }
+      }
+      
       setMessage('PDF generated successfully!')
       
       // Auto-download after a short delay
@@ -138,74 +174,8 @@ export default function PdfGenerator({ user }: PdfGeneratorProps) {
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${
-      darkMode 
-        ? 'bg-gradient-to-br from-gray-900 via-slate-900 to-black' 
-        : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'
-    }`}>
-      {/* Header */}
-      <header className={`border-b backdrop-blur-sm transition-colors duration-300 ${
-        darkMode 
-          ? 'border-gray-700/50 bg-gray-900/80' 
-          : 'border-white/20 bg-white/80'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <h1 className={`text-xl font-bold bg-gradient-to-r bg-clip-text text-transparent ${
-                darkMode 
-                  ? 'from-white to-gray-300' 
-                  : 'from-gray-900 to-gray-600'
-              }`}>
-                Web2PDF AI
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              {/* Dark Mode Toggle */}
-              <button
-                onClick={toggleDarkMode}
-                className={`p-2 rounded-lg transition-colors duration-200 ${
-                  darkMode 
-                    ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                }`}
-                title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              >
-                {darkMode ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
-                )}
-              </button>
-              <span className={`text-sm ${
-                darkMode ? 'text-gray-300' : 'text-gray-600'
-              }`}>{user.email}</span>
-              <a href="/dashboard" className="text-sm text-blue-600 hover:text-blue-800 transition-colors">
-                Dashboard
-              </a>
-              <button onClick={handleSignOut} className={`text-sm transition-colors ${
-                darkMode 
-                  ? 'text-gray-400 hover:text-gray-200' 
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}>
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <AppLayout user={user}>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
           <h2 className={`text-4xl font-bold bg-gradient-to-r bg-clip-text text-transparent mb-4 ${
             darkMode 
@@ -220,6 +190,68 @@ export default function PdfGenerator({ user }: PdfGeneratorProps) {
             Powered by AI-optimized rendering engine for professional-quality PDF conversion
           </p>
         </div>
+
+        {/* Usage Indicator */}
+        {user && usageData && (
+          <div className={`max-w-2xl mx-auto mb-8 p-4 rounded-xl border ${
+            canGenerate
+              ? darkMode
+                ? 'bg-green-900/20 border-green-700/50'
+                : 'bg-green-50 border-green-200'
+              : darkMode
+                ? 'bg-red-900/20 border-red-700/50'
+                : 'bg-red-50 border-red-200'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className={`w-3 h-3 rounded-full ${
+                  canGenerate
+                    ? 'bg-green-500'
+                    : 'bg-red-500'
+                }`}></div>
+                <div>
+                  <p className={`font-semibold ${
+                    canGenerate
+                      ? darkMode ? 'text-green-300' : 'text-green-800'
+                      : darkMode ? 'text-red-300' : 'text-red-800'
+                  }`}>
+                    {usageData.plan_type === 'free' ? 'Free Plan' : usageData.plan_type === 'pro' ? 'Pro Plan' : 'Enterprise Plan'}
+                  </p>
+                  <p className={`text-sm ${
+                    canGenerate
+                      ? darkMode ? 'text-green-200' : 'text-green-700'
+                      : darkMode ? 'text-red-200' : 'text-red-700'
+                  }`}>
+                    {usageData.conversions_used} of {usageLimit === Infinity ? '∞' : usageLimit} conversions used this month
+                  </p>
+                </div>
+              </div>
+              {!canGenerate && (
+                <Link
+                  href="/pricing"
+                  className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                    darkMode
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  Upgrade
+                </Link>
+              )}
+            </div>
+            {!canGenerate && (
+              <div className={`mt-3 p-3 rounded-lg ${
+                darkMode ? 'bg-gray-800/50' : 'bg-white/50'
+              }`}>
+                <p className={`text-sm ${
+                  darkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>
+                  💡 <strong>Tip:</strong> Upgrade to Pro for 100 conversions/month or Enterprise for unlimited conversions!
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Main Card */}
         <div className={`backdrop-blur-sm rounded-2xl shadow-xl border p-8 mb-8 transition-colors duration-300 ${
@@ -514,7 +546,7 @@ export default function PdfGenerator({ user }: PdfGeneratorProps) {
             }`}>Your PDFs are safely stored in encrypted cloud storage</p>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   )
 }

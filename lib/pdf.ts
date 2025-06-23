@@ -1,5 +1,4 @@
-import puppeteer from 'puppeteer-core'
-import chromium from '@sparticuz/chromium'
+import puppeteer from 'puppeteer'
 
 export interface PdfGenerationOptions {
   url: string
@@ -37,40 +36,17 @@ class PdfQueue {
 
     this.isInitializing = true
     try {
-      // Check if we're in a serverless environment (like Netlify)
-      const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
-      
-      if (isServerless) {
-        this.browser = await puppeteer.launch({
-          args: [
-            ...chromium.args,
-            '--disable-web-security',
-            '--disable-features=VizDisplayCompositor',
-            '--run-all-compositor-stages-before-draw',
-            '--memory-pressure-off'
-          ],
-          defaultViewport: chromium.defaultViewport,
-          executablePath: await chromium.executablePath(),
-          headless: chromium.headless,
-          ignoreHTTPSErrors: true,
-          timeout: 30000, // 30 second timeout for browser launch
-        })
-      } else {
-        // Local development
-        this.browser = await puppeteer.launch({
-          headless: true,
-          timeout: 30000,
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu'
-          ]
-        })
-      }
+      this.browser = await puppeteer.launch({
+        headless: true,
+        timeout: 15000,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor'
+        ]
+      })
     } finally {
       this.isInitializing = false
     }
@@ -126,13 +102,13 @@ export async function generatePdfFromUrl(options: PdfGenerationOptions): Promise
       await page.setViewport({ width: config.width, height: config.height })
       page.setDefaultTimeout(config.timeout)
       
-      // Navigate to the URL with retries
+      // Navigate with retry logic
       let retries = 3
       while (retries > 0) {
         try {
           await page.goto(url, { 
-            waitUntil: 'networkidle0',
-            timeout: config.timeout // Use timeout from quality config
+            waitUntil: 'domcontentloaded',
+            timeout: config.timeout
           })
           break
         } catch (error) {
@@ -171,48 +147,23 @@ export async function extractPageTitle(url: string): Promise<string> {
   let browser
   let page
   try {
-    // Check if we're in a serverless environment (like Netlify)
-    const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.RAILWAY_SERVICE_NAME
-    
-    if (isServerless) {
-      browser = await puppeteer.launch({
-        args: [
-          ...chromium.args,
-          '--disable-web-security',
-          '--disable-features=VizDisplayCompositor',
-          '--run-all-compositor-stages-before-draw',
-          '--memory-pressure-off'
-        ],
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
-        ignoreHTTPSErrors: true,
-        timeout: 30000,
-      })
-    } else {
-      browser = await puppeteer.launch({
-        headless: true,
-        timeout: 30000,
-        args: [
-          '--no-sandbox', 
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--disable-gpu'
-        ]
-      })
-    }
+    browser = await puppeteer.launch({
+      headless: 'new',
+      timeout: 30000,
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--single-process',
+        '--disable-gpu'
+      ]
+    })
     
     page = await browser.newPage()
-    page.setDefaultTimeout(25000)
-    page.setDefaultNavigationTimeout(25000)
+    page.setDefaultTimeout(20000)
+    page.setDefaultNavigationTimeout(20000)
     
-    await page.goto(url, { 
-      waitUntil: 'domcontentloaded',
-      timeout: Math.min(25000, 25000) // Cap at 25 seconds for Netlify
-    })
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 })
     
     const title = await page.title()
     return title || 'Untitled'

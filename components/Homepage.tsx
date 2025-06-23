@@ -1,86 +1,18 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useTheme } from '@/contexts/ThemeContext'
+import AppLayout from './AppLayout'
 
 interface HomepageProps {
   user?: any
 }
 
 export default function Homepage({ user }: HomepageProps) {
-  const [darkMode, setDarkMode] = useState(false)
-  const router = useRouter()
-  const supabase = createClient()
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.refresh()
-  }
-
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode)
-  }
+  const { darkMode } = useTheme()
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${
-      darkMode 
-        ? 'bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white' 
-        : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-gray-900'
-    }`}>
-      {/* Header */}
-      <header className={`border-b backdrop-blur-sm transition-colors duration-300 ${
-        darkMode 
-          ? 'border-gray-700/50 bg-gray-900/80' 
-          : 'border-white/20 bg-white/80'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                darkMode ? 'bg-blue-600' : 'bg-blue-600'
-              }`}>
-                <span className="text-white font-bold text-xl">W2P</span>
-              </div>
-              <h1 className="text-2xl font-bold">Web2PDF</h1>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={toggleDarkMode}
-                className={`p-2 rounded-lg transition-colors ${
-                  darkMode 
-                    ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400' 
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                }`}
-              >
-                {darkMode ? '☀️' : '🌙'}
-              </button>
-              
-              {user ? (
-                <div className="flex items-center space-x-3">
-                  <Link href="/dashboard" className="btn-secondary">
-                    Dashboard
-                  </Link>
-                  <button onClick={handleSignOut} className="btn-secondary">
-                    Sign Out
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-3">
-                  <Link href="/auth/signin" className="btn-secondary">
-                    Sign In
-                  </Link>
-                  <Link href="/auth/signin" className="btn-primary">
-                    Get Started
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+    <AppLayout user={user}>
 
       {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
@@ -88,14 +20,14 @@ export default function Homepage({ user }: HomepageProps) {
           <h1 className={`text-5xl md:text-6xl font-bold mb-6 ${
             darkMode ? 'text-white' : 'text-gray-900'
           }`}>
-            Convert Any Website
+            Snap Any Website
             <span className="block text-blue-600">to PDF Instantly</span>
           </h1>
           
           <p className={`text-xl md:text-2xl mb-8 max-w-3xl mx-auto ${
             darkMode ? 'text-gray-300' : 'text-gray-600'
           }`}>
-            Transform web pages into high-quality PDFs with cloud storage, 
+            Transform web pages into high-quality PDFs with SnapPDF - featuring cloud storage, 
             advanced options, and lightning-fast processing.
           </p>
           
@@ -124,7 +56,7 @@ export default function Homepage({ user }: HomepageProps) {
           <h2 className={`text-4xl font-bold text-center mb-16 ${
             darkMode ? 'text-white' : 'text-gray-900'
           }`}>
-            Why Choose Web2PDF?
+            Why Choose SnapPDF?
           </h2>
           
           <div className="grid md:grid-cols-3 gap-8">
@@ -333,23 +265,11 @@ export default function Homepage({ user }: HomepageProps) {
           : 'bg-white/50 border-gray-200'
       }`}>
         <div className="max-w-7xl mx-auto text-center">
-          <div className="flex items-center justify-center space-x-4 mb-6">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-              darkMode ? 'bg-blue-600' : 'bg-blue-600'
-            }`}>
-              <span className="text-white font-bold text-xl">W2P</span>
-            </div>
-            <h3 className={`text-2xl font-bold ${
-              darkMode ? 'text-white' : 'text-gray-900'
-            }`}>
-              Web2PDF
-            </h3>
-          </div>
           <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-            © 2024 Web2PDF. All rights reserved. Convert websites to PDF with ease.
+            © 2024 SnapPDF. All rights reserved. Snap websites to PDF with ease.
           </p>
         </div>
       </footer>
-    </div>
+    </AppLayout>
   )
 }

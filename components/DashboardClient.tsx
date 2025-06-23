@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useTheme } from '@/contexts/ThemeContext'
 import PdfHistory from '@/components/PdfHistory'
+import AppLayout from '@/components/AppLayout'
 import Link from 'next/link'
 
 interface DashboardClientProps {
@@ -11,82 +10,10 @@ interface DashboardClientProps {
 }
 
 export default function DashboardClient({ user }: DashboardClientProps) {
-  const [darkMode, setDarkMode] = useState(false)
-  const router = useRouter()
-  const supabase = createClient()
-
-  // Load dark mode from localStorage
-  useEffect(() => {
-    const savedDarkMode = localStorage.getItem('darkMode')
-    if (savedDarkMode) {
-      setDarkMode(JSON.parse(savedDarkMode))
-    }
-  }, [])
-
-  const toggleDarkMode = () => {
-    const newDarkMode = !darkMode
-    setDarkMode(newDarkMode)
-    localStorage.setItem('darkMode', JSON.stringify(newDarkMode))
-  }
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/auth/signin')
-  }
+  const { darkMode } = useTheme()
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${
-      darkMode 
-        ? 'bg-gradient-to-br from-gray-900 via-slate-900 to-black' 
-        : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'
-    }`}>
-      {/* Header */}
-      <header className={`border-b backdrop-blur-sm transition-colors duration-300 ${
-        darkMode 
-          ? 'border-gray-700/50 bg-gray-900/80' 
-          : 'border-white/20 bg-white/80'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <Link href="/" className="flex items-center space-x-4">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  darkMode ? 'bg-blue-600' : 'bg-blue-600'
-                }`}>
-                  <span className="text-white font-bold text-xl">W2P</span>
-                </div>
-                <h1 className={`text-2xl font-bold ${
-                  darkMode ? 'text-white' : 'text-gray-900'
-                }`}>
-                  Web2PDF
-                </h1>
-              </Link>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={toggleDarkMode}
-                className={`p-2 rounded-lg transition-colors ${
-                  darkMode 
-                    ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400' 
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                }`}
-              >
-                {darkMode ? '☀️' : '🌙'}
-              </button>
-              
-              <Link href="/generator" className="btn-primary">
-                New PDF
-              </Link>
-              
-              <button onClick={handleSignOut} className="btn-secondary">
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <AppLayout user={user}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Dashboard Header */}
         <div className="mb-8">
@@ -151,10 +78,10 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             </div>
           </Link>
           
-          <div className={`p-6 rounded-2xl shadow-lg ${
+          <Link href="/stats" className={`p-6 rounded-2xl shadow-lg transition-all hover:scale-105 ${
             darkMode 
-              ? 'bg-gray-800/50 border border-gray-700/50' 
-              : 'bg-white border border-gray-200'
+              ? 'bg-gray-800/50 border border-gray-700/50 hover:bg-gray-700/50' 
+              : 'bg-white border border-gray-200 hover:bg-gray-50'
           }`}>
             <div className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
               <div className="text-3xl mb-3">📊</div>
@@ -165,12 +92,12 @@ export default function DashboardClient({ user }: DashboardClientProps) {
               </h3>
               <p>Track your PDF generation activity</p>
             </div>
-          </div>
+          </Link>
           
-          <div className={`p-6 rounded-2xl shadow-lg ${
+          <Link href="/settings" className={`p-6 rounded-2xl shadow-lg transition-all hover:scale-105 ${
             darkMode 
-              ? 'bg-gray-800/50 border border-gray-700/50' 
-              : 'bg-white border border-gray-200'
+              ? 'bg-gray-800/50 border border-gray-700/50 hover:bg-gray-700/50' 
+              : 'bg-white border border-gray-200 hover:bg-gray-50'
           }`}>
             <div className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
               <div className="text-3xl mb-3">⚙️</div>
@@ -181,7 +108,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
               </h3>
               <p>Customize your PDF preferences</p>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* PDF History */}
@@ -198,6 +125,6 @@ export default function DashboardClient({ user }: DashboardClientProps) {
           <PdfHistory user={user} darkMode={darkMode} />
         </div>
       </div>
-    </div>
+    </AppLayout>
   )
 }
